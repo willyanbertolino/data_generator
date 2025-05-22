@@ -53,10 +53,19 @@ def get_user_work():
         order_ids = user_work["orders"]
         initial_values_df = init_df_order(order_ids)
         saved_df = get_user_df()
-        user_df = initial_values_df.merge(saved_df[["id", "pedido", "cliente"]], on=["pedido", "cliente"], how="left")
-        cols = user_df.columns.tolist()
-        cols.insert(0, cols.pop(cols.index("id")))
-        user_df = user_df[cols]
+
+        if saved_df is not None and "valor total" in saved_df.columns:
+            saved_df = saved_df.drop(columns=["valor total"])
+
+            merge_reference = saved_df[["id", "pedido", "cliente"]].drop_duplicates(subset=["pedido", "cliente"])
+            user_df = initial_values_df.merge(merge_reference, on=["pedido", "cliente"], how="left")
+            #change "id" column order
+            cols = user_df.columns.tolist()
+            cols.insert(0, cols.pop(cols.index("id")))
+            user_df = user_df[cols]
+        else:
+            st.info("Não foi possivel carregar os dados. Recarregue a página.")
+            st.stop()
 
     return {
                 "df": user_df,

@@ -6,7 +6,7 @@ from utils.mock_data import df_cols
 from routes.auth.authentication import login, create_user, logout, getUsers
 from routes.data.create_data import client_generator, product_generator, order_generator
 from routes.data.table_generator import get_user_work
-from routes.data.analysis import set_sent_and_send, check_missing_col, test_df, data_analysis_problems, data_analysis_total_problems
+from routes.data.analysis import set_sent_and_send, check_missing_col, data_analysis_problems, data_analysis_total_problems
 from routes.data.db_router import get_user_df
 
 if "logged" not in st.session_state:

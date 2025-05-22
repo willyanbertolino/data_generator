@@ -10,8 +10,8 @@ if "access_token" not in st.session_state:
 
 @st.cache_resource
 def get_supabase():
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
+    url = st.secrets.get("SUPABASE_URL") or os.getenv("SUPABASE_URL")
+    key = st.secrets.get("SUPABASE_KEY") or os.getenv("SUPABASE_KEY")
     if not url or not key:
         raise ValueError("SUPABASE_URL ou SUPABASE_KEY não encontrados nas variáveis de ambiente")
 

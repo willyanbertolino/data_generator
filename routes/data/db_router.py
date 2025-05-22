@@ -39,7 +39,7 @@ def save_df(df):
         supabase = get_supabase()
         df["user_id"] = user_id
         data = df.to_dict(orient="records")
-        res = supabase.table("dataframe").upsert(data, on_conflict=["id", "user_id"]).eq("user_id", user_id).execute()
+        res = supabase.table("dataframe").upsert(data, on_conflict=["id", "user_id"]).execute()
 
         if res.data:
             df_res = pd.DataFrame(res.data)

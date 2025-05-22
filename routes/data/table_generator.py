@@ -20,7 +20,12 @@ def create_initial_order_data(user_id):
     random.shuffle(final_orders)
     df_to_save = init_df_order(final_orders)
     df = save_df(df_to_save)
-    df = df.drop(columns=["valor total"])
+
+    if df is not None and "valor total" in df.columns:
+        df = df.drop(columns=["valor total"])
+    else:
+        st.info("Não foi possível salvar os dados")
+        st.stop()
     created_problems = data_analysis_total_problems(df)
     new_data = {
                     "user_id": user_id,

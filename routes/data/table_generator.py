@@ -1,8 +1,9 @@
 import streamlit as st
+import pandas as pd
+import random
+from io import BytesIO
 from routes.data.db_router import get_data_ids, get_data_fields, get_all_data_filtered, save_data, save_df, get_user_df
 from routes.data.analysis import data_analysis_total_problems
-import random
-import pandas as pd
 
 #def create_table():
     #n = st.number_input("Quantidade de pedidos", min_value=1, max_value=1000, key="data_table_quantity")
@@ -116,3 +117,10 @@ def init_df_order(order_ids):
     
     df = pd.DataFrame(data)
     return df
+
+def to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Dados')
+    processed_data = output.getvalue()
+    return processed_data

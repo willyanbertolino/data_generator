@@ -5,7 +5,7 @@ from utils.modal import modal
 from utils.mock_data import df_cols
 from routes.auth.authentication import login, create_user, logout, getUsers
 from routes.data.create_data import client_generator, product_generator, order_generator
-from routes.data.table_generator import get_user_work
+from routes.data.table_generator import get_user_work, to_excel
 from routes.data.analysis import set_sent_and_send, check_missing_col, data_analysis_problems, data_analysis_total_problems
 from routes.data.db_router import get_user_df
 
@@ -106,6 +106,17 @@ else:
         with st.expander("Visualizar os dados"):
             st.subheader("📊 Dados para análise")
             st.dataframe(user_work["df"], height=400, use_container_width=True)
+
+        excel_data = to_excel(user_work["df"])
+
+        st.download_button(
+            label='Baixar a planilha',
+            data=excel_data,
+            file_name='dados.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        st.divider()
             
         st.header("📊 Submissão de Dados para Análise")
         upload_df = None

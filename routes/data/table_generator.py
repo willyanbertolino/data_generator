@@ -53,31 +53,33 @@ def get_user_work():
     else:
         saved_df = get_user_df()
 
-        if saved_df is not None:
-            order_ids = user_work["orders"]
-            initial_df = init_df_order(order_ids)
-
-            if len(initial_df) != len(saved_df):
-                raise ValueError("Número de linhas do DataFrame reconstruído e salvo não bate.")
-            
-            initial_df = initial_df.copy()
-            initial_df["id"] = saved_df["id"].reset_index(drop=True)
-            #change "id" column order
-            cols = user_df.columns.tolist()
-            cols.insert(0, cols.pop(cols.index("id")))
-            user_df = user_df[cols]
-        else:
-            st.info("Não foi possivel carregar os dados. Recarregue a página.")
+        if saved_df is None:
+            st.info("Não foi possível carregar os dados. Recarregue a página.")
             st.stop()
 
+        order_ids = user_work.get("orders", [])
+
+        initial_df = init_df_order(order_ids)
+
+        if len(initial_df) != len(saved_df):
+            raise ValueError("Número de linhas do DataFrame reconstruído e salvo não bate.")
+
+        initial_df = initial_df.copy()
+        initial_df["id"] = saved_df["id"].reset_index(drop=True)
+
+        cols = initial_df.columns.tolist()
+        cols.insert(0, cols.pop(cols.index("id")))
+        user_df = initial_df[cols]
+
     return {
-                "df": user_df,
-                "created_issue": user_work["created_issue"],
-                "solved_issue": user_work["solved_issue"],
-                "new_issue": user_work["new_issue"],
-                "submission": user_work["submission"],
-                "score": user_work["score"]
-            }
+        "df": user_df,
+        "created_issue": user_work.get("created_issue"),
+        "solved_issue": user_work.get("solved_issue"),
+        "new_issue": user_work.get("new_issue"),
+        "submission": user_work.get("submission"),
+        "score": user_work.get("score")
+    }
+
 
 def init_df_order(order_ids):
     orders_data = get_data_fields("orders","id, client_id", "id", order_ids)

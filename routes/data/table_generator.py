@@ -20,6 +20,7 @@ def create_initial_order_data(user_id):
     final_orders = selected_orders + duplicate
     random.shuffle(final_orders)
     df_to_save = init_df_order(final_orders)
+    df_to_save["valor total"] = None
     df = save_df(df_to_save)
 
     if df is not None and "valor total" in df.columns:
@@ -50,15 +51,17 @@ def get_user_work():
         user_work = user_work_res["user_work"]
         user_df = user_work_res["df"]
     else:
-        order_ids = user_work["orders"]
-        initial_values_df = init_df_order(order_ids)
         saved_df = get_user_df()
 
-        if saved_df is not None and "valor total" in saved_df.columns:
-            saved_df = saved_df.drop(columns=["valor total"])
+        if saved_df is not None:
+            order_ids = user_work["orders"]
+            initial_df = init_df_order(order_ids)
 
-            merge_reference = saved_df[["id", "pedido", "cliente"]].drop_duplicates(subset=["pedido", "cliente"])
-            user_df = initial_values_df.merge(merge_reference, on=["pedido", "cliente"], how="left")
+            if len(initial_df) != len(saved_df):
+                raise ValueError("Número de linhas do DataFrame reconstruído e salvo não bate.")
+            
+            initial_df = initial_df.copy()
+            initial_df["id"] = saved_df["id"].reset_index(drop=True)
             #change "id" column order
             cols = user_df.columns.tolist()
             cols.insert(0, cols.pop(cols.index("id")))
@@ -119,7 +122,6 @@ def init_df_order(order_ids):
                 "subcategoria": product["subcategory"] if product else None,
                 "preço un.": product["price"] if product else None,
                 "quantidade": item["quantity"],
-                "valor total": None
             }
 
             data.append(row)

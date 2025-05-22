@@ -55,7 +55,7 @@ def get_user_df():
     user_id = st.session_state["user"]["id"]
     try:
         supabase = get_supabase()
-        res = supabase.table("dataframe").select("*").eq("user_id", user_id).execute()
+        res = supabase.table("dataframe").select("*").eq("user_id", user_id).order("id").execute()
         
         if res.data:
             df_res = pd.DataFrame(res.data)

@@ -86,22 +86,23 @@ def client_generator():
 
     if st.button("Gerar", key="generate_client_btn"):
         if selected_cities:
-            result = create_clients(selected_cities, num, city_issues=city_issues, zip_issues=zip_issues)
+            result = create_clients(selected_cities, n=num, city_issues=city_issues, zip_issues=zip_issues)
             st.write(result)
             st.button("Salvar", on_click=save_data, args=(result, "clients"), key="save_client_btn")
-            st.success(f'dados inseridos com sucesso na tabela')
         else:
             st.warning("Escolha pelo menos uma cidade.")
 
 def create_clients(selected_cities, n=5, city_issues={}, zip_issues={}):
+    data = []
     for _ in range(n):
         city = random.choice(selected_cities)
         zip = random.choice(address[city])
 
         city_data = typo_empty_issues("name", city, city_issues)
         zip_data = typo_empty_issues("number", zip, zip_issues)
+        data.append({"city": city_data["name"], "zip": zip_data["number"]})
 
-    return {"city": city_data["name"], "zip": zip_data["number"]}
+    return data
 
 # Product generator
 def product_generator():
@@ -164,7 +165,13 @@ def create_products_by_category(gender, selected_products, product_issues, n):
     for _ in range(n):
         selected_category = random.choice(selected_products)
         selected_subcategory = random.choice(products[gender][selected_category])
-        price = round(random.uniform(70.0, 300.0), 2)
+        outlier_free_chance = 0.9
+
+        if random.random() < outlier_free_chance:
+            price = round(random.uniform(70.0, 300.0), 2)
+        else:
+            price = round(random.uniform(12000.0, 100000.0), 2)
+        
         
         if product_issues.get('issue_rate', 0) > 0:
             gender_text = typo_empty_issues("gender", gender, product_issues)
@@ -202,8 +209,8 @@ def create_product_list(order_id):
     n = random.choices(bag_quantity, weights=weigths, k=1)[0]
     items = []
 
-    q = [1, 2, 3]
-    w = [90, 8, 2]
+    q = [1, 2, 3, 100]
+    w = [85, 8, 2, 5]
     choose_products = random.sample(products, k=n)
 
     for product in choose_products:

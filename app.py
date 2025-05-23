@@ -124,8 +124,9 @@ else:
         if user_work["submission"] < 3:
             if not st.session_state["uploaded_data"]:
                 st.subheader("📥 Enviar planilha para análise")
-                uploaded_file = st.file_uploader("Escolha um arquivo Excel ou CSV", type=["csv", "xlsx"])
-
+                st.info("Aguarde... Em breve poderá subir seu arquivo")
+                #uploaded_file = st.file_uploader("Escolha um arquivo Excel ou CSV", type=["csv", "xlsx"])
+                uploaded_file = False
                 if uploaded_file:
                     try:
                         if uploaded_file.name.endswith(".csv"):

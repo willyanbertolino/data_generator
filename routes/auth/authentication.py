@@ -22,7 +22,6 @@ def login():
         return
 
     try:
-        # 2. Tentativa de buscar informações extras
         user = supabase.table("users").select("*").eq("id", uid).execute()
 
         if user.data and len(user.data) > 0:
@@ -97,9 +96,9 @@ def getUsers():
 
         if users.data:
             for user in users.data:
-                nome = user["name"]
+                name = user["name"]
                 email = user["email"]
-                st.markdown(f"📧 **{nome}** ({email})")
+                st.markdown(f"📧 **{name}** ({email})")
         else:
             st.info("Nenhum usuário encontrado.")
 

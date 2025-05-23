@@ -20,7 +20,6 @@ def create_initial_order_data(user_id):
     final_orders = selected_orders + duplicate
     random.shuffle(final_orders)
     df_to_save = init_df_order(final_orders)
-    st.dataframe(df_to_save)
     df_to_save["valor total"] = None
     df = save_df(df_to_save)
 

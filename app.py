@@ -6,7 +6,7 @@ from utils.mock_data import df_cols
 from routes.auth.authentication import login, create_user, logout, getUsers
 from routes.data.create_data import client_generator, product_generator, order_generator
 from routes.data.table_generator import get_user_work, to_excel
-from routes.data.analysis import set_sent_and_send, check_missing_col, data_analysis_problems, data_analysis_total_problems
+from routes.data.analysis import set_sent_and_send, check_missing_col, errs_types, data_analysis_problems_ids, duplicated_problems_total, solved_dup
 from routes.data.db_router import get_user_df
 
 if "logged" not in st.session_state:
@@ -124,21 +124,19 @@ else:
         if user_work["submission"] < 3:
             if not st.session_state["uploaded_data"]:
                 st.subheader("📥 Enviar planilha para análise")
-                st.info("Aguarde... Em breve poderá subir seu arquivo")
-                #uploaded_file = st.file_uploader("Escolha um arquivo Excel ou CSV", type=["csv", "xlsx"])
-                uploaded_file = False
+                #st.info("Aguarde... Em breve poderá subir seu arquivo")
+                uploaded_file = st.file_uploader("Escolha um arquivo de Excel", type=["xlsx"])
+                #uploaded_file = False
                 if uploaded_file:
                     try:
-                        if uploaded_file.name.endswith(".csv"):
-                            upload_df = pd.read_csv(uploaded_file)
-                        else:
-                            upload_df = pd.read_excel(uploaded_file)
+                        upload_df = pd.read_excel(uploaded_file)
+                        
 
                         if "df" in user_work and not upload_df.empty and not user_work["df"].empty:
                             check = check_missing_col(upload_df)
                             if check:
                                 st.info(f"Colunas faltando: {check}")
-                                st.info("As colunas citadas são obrigatórias. Caso tenha as colunas, verifique se o nome está correto.")
+                                st.info("As colunas citadas são obrigatórias. Caso tenha as colunas, verifique se o nome está escrito corretamente.")
                                 st.stop()
                             else:
                                 st.session_state["uploaded_data"] = True
@@ -154,18 +152,37 @@ else:
                     upload_df = st.session_state.get("upload_df")
                     st.success("✅ Dados carregados com sucesso!")
                     st.dataframe(upload_df, height=400, use_container_width=True)
-                    st.button(
-                        "Enviar",
-                        on_click=lambda: set_sent_and_send(upload_df, user_work['created_issue'], user_work["submission"]),
-                        key="submit_data_btn"
-                    )
+                    col_cancel, col_send= st.columns([1,1])
+                    with col_send:
+                        st.button(
+                            "Enviar",
+                            on_click=set_sent_and_send,
+                            args=(user_work['df'], upload_df, user_work["submission"]),
+                            key="submit_data_btn"
+                        )
+                    with col_cancel:
+                        if st.button("Cancelar"):
+                            st.session_state["upload_df"] = None
+                            st.session_state["uploaded_data"] = None
+                            st.session_state["sent_btn"] = False
+                            
+                            st.rerun()
                 else:
                     st.success(f"✅ Dados enviados! Você ainda tem {3-user_work["submission"]} tentativa(s) para melhorar a nota.")
+                    st.info("Dica: se atente aos erros do tipo:")
+                    st.write(errs_types(st.session_state.get("upload_df")))
+                    if st.button("📤 Enviar novamente"):
+                        st.session_state["upload_df"] = None
+                        st.session_state["uploaded_data"] = None
+                        st.session_state["sent_btn"] = False
+                        
+                        st.rerun()
         else:
             st.info(f"Você atingiu o limite de tentativas. Parabéns, sua nota final é {user_work['score']}")
             final_df = get_user_df()
-            unsolved = data_analysis_total_problems(final_df)
-            st.markdown(f'## Faltou resolver <span style="color:FireBrick; font-size:40px;"><b>{unsolved}</b></span> problemas:', unsafe_allow_html=True)
-            st.write(data_analysis_problems(final_df))
+            print(duplicated_problems_total(final_df))
+            st.markdown(f'## Confira abaixo os ids das linhas que apresentam problemas.')
+            #final = solved_dup(final_df)
+            st.write(data_analysis_problems_ids(final_df))
 
 

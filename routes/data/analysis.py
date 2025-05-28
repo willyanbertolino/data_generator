@@ -1,147 +1,188 @@
 import pandas as pd
 import streamlit as st
-from utils.mock_data import cities, all_zips, all_gender, all_categories, all_subcategories, df_cols
-from routes.data.db_router import update_data, save_df
+from utils.mock_data import cities, all_zips, all_gender, all_categories, all_subcategories, df_cols, products, address
+from routes.data.db_router import update_data, save_df, get_dup_solved
+
+def data_analysis_problems_dict(df):
+    typos = typo_problems_total(df)
+    dup = duplicated_problems_total(df)
+    empty = empty_problems_total(df)
+    outliers = outliers_problems_total(df)
+    gen_cat_sub_inv = verify_gen_cat_sub_total(df)
+    city_zip_inv = verify_city_zip_total(df)
+
+    err = typos | dup | empty | outliers | gen_cat_sub_inv | city_zip_inv
+    return err
 
 def data_analysis_total_problems(df):
-    dup = duplicated_total_problems(df)
-    typos = typo_total_problems(df)
-    empty = empty_problems(df)
-    outliers = outliers_total_problems(df)
-
-    err = typos | dup | empty | outliers
+    err = data_analysis_problems_dict(df)
     total = sum(err.values())
     return total
 
-def data_analysis_problems(df):
-    msg = {"Dados duplicados": "", "Erros de digitação": "", "Valores atípicos": "", "Valores ausentes": ""}
+def data_analysis_problems_ids(df):
+    typos_p = typo_problem_ids(df)
     dup_p = duplicated_problem_ids(df)
-    typos_p = typo_unique_err(df)
-    out_p = outliers_unique_err(df)
-    empty = empty_problems(df)
+    empty = empty_problem_ids(df)
+    new_city_zip = verify_city_zip_ids(df)
+    new_gen_cat_sub = verify_gen_cat_sub_ids(df)
+    out_p = outliers_problems_ids(df)
 
-    # Duplicates
-    if len(dup_p) > 0:
-        ids_str = [str(n) for n in dup_p]
-        msg["Dados duplicados"] = "❌ Existem dados duplicados! ids: " + ", ".join(map(str, ids_str))
-    else:
-        msg["Dados duplicados"] = "✅ Não há dados duplicados."
+    all_errs = dup_p | typos_p | new_city_zip | new_gen_cat_sub | empty | out_p
+    return all_errs
 
-    # Typos
-    typos_err = {k: v for k, v in typos_p.items() if v}
-    if not typos_err:
-        msg["Erros de digitação"] = "✅ Nenhum erro encontrado."
-    else:
-        typos_err = sum(typos_err.values(),[])
-        msg["Erros de digitação"] = "❌ " + ", ".join(map(str, typos_err))
-
-    # Outliers
-    if out_p["quantidade_outliers"]:
-        out_p["quantidade_outliers"] = ["Quantidade: "] + [str(n) for n in out_p["quantidade_outliers"]]
-
-    if out_p["preço_outliers"]:
-        out_p["preço_outliers"] = ['Preço un.: '] + num_string_format(out_p["preço_outliers"])
-
-    if out_p["valor_total_outliers"]:
-        out_p["valor_total_outliers"] = ['Valor total: '] + num_string_format(out_p["valor_total_outliers"])
-
-    out_err = {k: v for k, v in out_p.items() if v}
-    if out_err:
-        out_err = sum(out_err.values(),[])
-        msg["Valores atípicos"] = "❌ " + ", ".join(map(str, out_err))
-    else:
-        msg["Valores atípicos"] = "✅ Não há valores atípicos."
-
-    # Empty
-    if len(empty) > 0:
-        msg["Valores ausentes"] = "❌ Existem celulas vazias!"
-    else:
-        msg["Valores ausentes"] = "✅ Não há vazios."
-
-    return msg
+def errs_types(df):
+    issues = data_analysis_problems_ids(df)
+    keys = [k for k, v in issues.items() if v]
+    return keys
 
 def num_string_format(array):
     return [f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") for v in array]
 
-def typo_problems(df):
-    city_typos = df[~df["cidade"].str.lower().isin([c.lower() for c in cities] + [None])]
-    zip_typos = df[~df["cep"].str.lower().isin([z.lower() for z in all_zips] + [None])]
-    gender_typos = df[~df["genero"].str.lower().isin([g.lower() for g in all_gender] + [None])]
-    category_typos = df[~df["categoria"].str.lower().isin([cat.lower() for cat in all_categories] + [None])]
-    subcategory_typos = df[~df["subcategoria"].str.lower().isin([s.lower() for s in all_subcategories]+ [None])]
+def get_ids(sub_df):
+    return sub_df["id"].tolist() if "id" in sub_df.columns else sub_df.index.tolist()
+
+def typo_problem_ids(df):
+    city_typos = df[df["cidade"].notna() & ~df["cidade"].str.lower().isin([c.lower() for c in cities])]
+    zip_typos = df[df["cep"].notna() & ~df["cep"].isin([z for z in all_zips])]
+    gender_typos = df[df["genero"].notna() & ~df["genero"].str.lower().isin([g.lower() for g in all_gender])]
+    category_typos = df[df["categoria"].notna() & ~df["categoria"].str.lower().isin([cat.lower() for cat in all_categories])]
+    subcategory_typos = df[df["subcategoria"].notna() & ~df["subcategoria"].str.lower().isin([s.lower() for s in all_subcategories])]
+
     typos = {
-        "cidade_typos": city_typos["cidade"],
-        "cep_typos": zip_typos["cep"],
-        "genero_typos": gender_typos["genero"],
-        "categoria_typos": category_typos["categoria"],
-        "subcategoria_typos": subcategory_typos["subcategoria"]
-        }
+        "cidade_typos": get_ids(city_typos),
+        "cep_typos": get_ids(zip_typos),
+        "genero_typos": get_ids(gender_typos),
+        "categoria_typos": get_ids(category_typos),
+        "subcategoria_typos": get_ids(subcategory_typos),
+    }
     return typos
 
-def typo_total_problems(df):
-    typos = typo_problems(df)
+def typo_problems_total(df):
+    typos = typo_problem_ids(df)
     total_values = {col: len(s) for col, s in typos.items()}
     return total_values
-
-def typo_unique_err(df):
-    typos = typo_problems(df)
-    values = {col: s.unique().tolist() for col, s in typos.items()}
-    return values
 
 def duplicated_problem_ids(df):
     df_wo_id = df.drop(columns=["id"], errors="ignore")
     duplicates = df_wo_id.duplicated(keep=False)
+
     if "id" in df.columns:
-        return df.loc[duplicates, "id"].tolist()
-    return df[duplicates].index.tolist()
+        ids = df.loc[duplicates, "id"].tolist()
+    else:
+        ids = df[duplicates].index.tolist()
 
-def duplicated_total_problems(df):
+    return {"duplicatas": ids}
+
+def duplicated_problems_total(df):
     dup = duplicated_problem_ids(df)
-    return {"duplicates": len(dup)}
+    return {"duplicates": len(dup["duplicatas"])}
 
-def empty_problems(df):
+def empty_problem_ids(df):
+    empty_rows = df.isnull().any(axis=1)
+    
+    if "id" in df.columns:
+        ids = df.loc[empty_rows, "id"].tolist()
+    else:
+        ids = df[empty_rows].index.tolist()
+
+    return {"vazios": ids}
+
+def empty_problems_total(df):
     total_missing = df.isna().sum().sum()
     return {"empty": int(total_missing)}
 
-def outliers_problems(df):
+def verify_city_zip_ids(df):
+    err_ids = []
+
+    for idx, row in df.iterrows():
+        city = row.get("cidade")
+        zip_code = row.get("cep")
+
+        if pd.isna(city) or pd.isna(zip_code):
+            continue
+
+        city = str(city).strip()
+        zip_code = str(zip_code).strip()
+
+        if city in address and zip_code not in address[city]:
+            if "id" in df.columns:
+                err_ids.append(row["id"])
+            else:
+                err_ids.append(idx)
+
+    return {"cidade_cep_incompatíveis": err_ids}
+
+def verify_city_zip_total(df):
+    err = verify_city_zip_ids(df)
+    return {"cidade_cep_issues": len(err["cidade_cep_incompatíveis"])}
+
+def verify_gen_cat_sub_ids(df):
+    err_ids = []
+
+    for idx, row in df.iterrows():
+        gender = row.get("genero")
+        category = row.get("categoria")
+        subcategory = row.get("subcategoria")
+
+        if pd.isna(gender) or pd.isna(category) or pd.isna(subcategory):
+            continue
+
+        gender = str(gender).strip().lower()
+        category = str(category).strip()
+        subcategory = str(subcategory).strip()
+
+        if gender not in products:
+            err_ids.append(row["id"] if "id" in df.columns else idx)
+            continue
+
+        if category not in products[gender]:
+            err_ids.append(row["id"] if "id" in df.columns else idx)
+            continue
+
+        if subcategory not in products[gender][category]:
+            err_ids.append(row["id"] if "id" in df.columns else idx)
+
+    return {"genero_cat_sub_incompatíveis": err_ids}
+
+def verify_gen_cat_sub_total(df):
+    err = verify_gen_cat_sub_ids(df)
+    return {"genero_cat_sub_incompatíveis": len(err["genero_cat_sub_incompatíveis"])}
+
+def outliers_problems_ids(df):
     city_outliers = df[df["cidade"] == "Manaus"]
     zip_outliers = df[df["cep"] == "86082-580"]
     quantity_outliers = df[df["quantidade"] > 3]
     price_outliers = df[df["preço un."] > 300]
 
-    if "valor total" not in df.columns:
-        df["valor total"] = df["preço un."] * df["quantidade"]
-
-    q1 = df["valor total"].quantile(0.25)
-    q3 = df["valor total"].quantile(0.75)
-    iqr = q3 - q1
-    inf = q1 - 1.5 * iqr
-    sup = q3 + 1.5 * iqr
-    outliers_total_value = df[(df["valor total"] < inf) | (df["valor total"] > sup)]
     outliers = {
-        "cidade_outliers": city_outliers,
-        "cep_outliers": zip_outliers,
-        "quantidade_outliers": quantity_outliers,
-        "preço_outliers": price_outliers,
-        "valor_total_outliers": outliers_total_value
-        }
+        "cidade_outliers": get_ids(city_outliers),
+        "cep_outliers": get_ids(zip_outliers),
+        "quantidade_outliers": get_ids(quantity_outliers),
+        "preço_outliers": get_ids(price_outliers),
+    }
+
+    if "valor total" in df.columns and df["valor total"].notna().any():
+        q1 = df["valor total"].quantile(0.25)
+        q3 = df["valor total"].quantile(0.75)
+        iqr = q3 - q1
+        inf = q1 - 1.5 * iqr
+        sup = q3 + 1.5 * iqr
+        outliers_total_value = df[(df["valor total"] < inf) | (df["valor total"] > sup)]
+        outliers["valor_total_outliers"] = get_ids(outliers_total_value)
+
     return outliers
 
-def outliers_total_problems(df):
-    outliers_total = outliers_problems(df)
-    total_values = {col: len(s) for col, s in outliers_total.items()}
+def outliers_problems_total(df):
+    outliers_total = outliers_problems_ids(df)
+    keys = [
+        "cidade_outliers",
+        "cep_outliers",
+        "quantidade_outliers",
+        "preço_outliers",
+        "valor_total_outliers"
+    ]
+    total_values = {key: len(outliers_total.get(key, [])) for key in keys}
     return total_values
-
-def outliers_unique_err(df):
-    outliers = outliers_problems(df)
-    values = {
-        "cidade_outliers": outliers["cidade_outliers"]["cidade"].unique().tolist(),
-        "cep_outliers": outliers["cep_outliers"]["cep"].unique().tolist(),
-        "quantidade_outliers": outliers["quantidade_outliers"]["quantidade"].unique().tolist(),
-        "preço_outliers": outliers["preço_outliers"]["preço un."].unique().tolist(),
-        "valor_total_outliers": outliers["valor_total_outliers"]["valor total"].unique().tolist(),
-    }
-    return values
 
 def check_missing_col(upload_df):
     uploaded_cols = set(col.lower() for col in upload_df.columns)
@@ -149,59 +190,68 @@ def check_missing_col(upload_df):
     missing = set(df_col) - set(uploaded_cols)
     return missing
 
-def set_sent_and_send(upload_df, created_issue, submission):
-    st.session_state["sent_btn"] = True
-    send_data(upload_df, created_issue, submission)
-
-def send_data(df, initial_issues, num_submission):
-    res = score_data(df, initial_issues, num_submission)
+def set_sent_and_send(df_initial, upload_df, submission):
+    res = send_data(df_initial, upload_df, submission)
     if res:
-        st.session_state["uploaded_data"] = False
-        st.session_state["upload_df"] = None
-        st.session_state["sent_btn"] = False
+        st.session_state["sent_btn"] = True
 
-        st.success("✅ Dados enviados com sucesso! Você pode enviar outro arquivo.")
-        st.rerun()
-    else:
-        st.info("Algo deu errado ao atualizar os dados")
-    return
+def send_data(df_initial, upload_df, num_submission):
+    res = score_data(df_initial, upload_df, num_submission)
+    if res:
+        return True
+    return False
 
-def score_data(upload_df, issues, n_submission):
-    upload_problems = data_analysis_total_problems(upload_df)
-    solved_issue = issues - upload_problems
-    score = 0
-    if solved_issue > 0:
-        score = (issues - upload_problems) / issues
+def score_data(df_initial, upload_df, n_submission):
+    res = compare_result(df_initial, upload_df)
+    solved_percent = res["solved_issue"]/res["total"]
+    new_percent = res["new_issue"]/res["total"]
+
+    score = (solved_percent * 0.7 - new_percent * 0.3)*(10/7)
+    if score < 0:
+        score = 0
     
-    new_data = {"score": round(score * 10, 1), "solved_issue": solved_issue, "submission": n_submission+1}
+    new_data = {
+        "score": round(score * 10, 1),
+        "created_issue": res["total"],
+        "solved_issue": res["solved_issue"],
+        "new_issue": res["new_issue"],
+        "solved_dup": res["solved_dup"],
+        "submission": n_submission+1
+        }
+
     update_data(new_data, "user_work")
     res = save_df(upload_df)
     return isinstance(res, pd.DataFrame)
 
-# def test_df(df):
-#     df = df.copy()
-#     df["Valor Total"] = df["preço un."] * df["quantidade"]
-#     df = solve_problems(df)
-#     return df
+def compare_result(df_initial, df_upload):
+    initial_problems = data_analysis_problems_dict(df_initial)
+    uploaded_problems = data_analysis_problems_dict(df_upload)
+    initial_problems["cidade_cep_incompatível"] = 0
+    initial_problems["genero_cat_sub_invalidos"] = 0
 
-# def drop_duplicates(df):
-#     return df.drop_duplicates()
+    dup = (uploaded_problems.get("duplicates", 0) == 0)
 
-# def solve_problems(df):
-#     df = drop_duplicates(df)
-#     df.loc[df["cidade"].str.lower() == "ambé", "cidade"] = "Cambé"
-#     df.loc[df["cidade"].str.lower() == "marhngá", "cidade"] = "Maringá"
-#     df.loc[df["cidade"].str.lower() == "pucarana", "cidade"] = "Apucarana"
-#     df.loc[df["genero"].str.lower() == "mascujlino", "genero"] = "masculino"
-#     df.loc[df["genero"].str.lower() == "eminino", "genero"] = "feminino"
-#     df.loc[df["genero"].str.lower() == "maasculino", "genero"] = "masculino"
-#     df.loc[df["genero"].str.lower() == "feminno", "genero"] = "feminino"
-#     df.loc[df["genero"].str.lower() == "nmasculino", "genero"] = "masculino"
-#     df.loc[df["genero"].str.lower() == "femiino", "genero"] = "feminino"
-#     df.loc[df["genero"].str.lower() == "feminhino", "genero"] = "feminino"
-#     df.loc[df["genero"].str.lower() == "masiculino", "genero"] = "masculino"
-#     df.loc[df["genero"].str.lower() == "mapsculino", "genero"] = "masculino"
-#     df.loc[df["genero"].str.lower() == "femitnino", "genero"] = "feminino"
-#     df.loc[df["genero"].str.lower() == "femitnino", "genero"] = "feminino"
+    total = sum(initial_problems.values())
+    solved = 0
+    new = 0
 
-#     return df
+    for key in initial_problems:
+        before = initial_problems[key]
+        after = uploaded_problems.get(key, 0)
+        if after > before:
+            new += after-before
+        elif after < before:
+            solved += before-after
+    
+    return {"total": total, "solved_issue": solved, "new_issue": new, "solved_dup": dup}
+
+
+def solved_dup(df):
+    solved = get_dup_solved()
+
+    if solved:
+        duplicates_mask = df.drop(columns=["id"], errors="ignore").duplicated(keep=False)
+        df_no_duplicates = df[~duplicates_mask]
+        return df_no_duplicates
+    else:
+        return df

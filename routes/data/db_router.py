@@ -2,6 +2,7 @@ import streamlit as st
 from db.connection import get_supabase
 import pandas as pd
 from utils.mock_data import df_cols
+import numpy as np
 
 def save_data(new_data: dict, table: str, res: bool = False):
     try:
@@ -32,12 +33,13 @@ def update_data(new_data: dict, table: str):
     except Exception as e:
         st.error(f"Ocorreu um erro ao salvar os dados: {str(e)}")
         return
-
+    
 def save_df(df):
     user_id = st.session_state["user"]["id"]
     try:
         supabase = get_supabase()
         df["user_id"] = user_id
+        df = df.replace({np.nan: None})
         data = df.to_dict(orient="records")
         res = supabase.table("dataframe").upsert(data, on_conflict=["id", "user_id"]).execute()
 
@@ -56,16 +58,30 @@ def get_user_df():
     try:
         supabase = get_supabase()
         res = supabase.table("dataframe").select("*").eq("user_id", user_id).order("id").execute()
-        
+        #res_work_dup = supabase.table("user_work").select("solved_dup").eq("user_id", user_id).execute()
+
         if res.data:
-            df_res = pd.DataFrame(res.data)
-            df_res = df_res[df_cols]
-            return df_res
+            return pd.DataFrame(res.data)
         else:
             return st.info("Não foi possível carregar os dados")
     except Exception as e:
         st.error(f"Ocorreu um erro ao buscar os dados: {str(e)}")
         return
+    
+def get_dup_solved():
+    user_id = st.session_state["user"]["id"]
+    try:
+        supabase = get_supabase()
+        res_work_dup = supabase.table("user_work").select("solved_dup").eq("user_id", user_id).execute()
+
+        if res_work_dup.data:
+            return res_work_dup.data
+        else:
+            return st.info("Não foi possível saber se resolveu duplicatas")
+    except Exception as e:
+        st.error(f"Ocorreu um erro ao buscar os dados: {str(e)}")
+        return
+    
     
 def get_all_data(table:str):
     try:

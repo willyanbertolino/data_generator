@@ -7,7 +7,7 @@ if "access_token" not in st.session_state:
 
 @st.cache_resource
 def get_supabase():
-    access_local = False
+    access_local = True
     if access_local:
         from dotenv import load_dotenv
         load_dotenv()

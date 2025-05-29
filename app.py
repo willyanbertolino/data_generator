@@ -131,7 +131,6 @@ else:
                     try:
                         upload_df = pd.read_excel(uploaded_file)
                         
-
                         if "df" in user_work and not upload_df.empty and not user_work["df"].empty:
                             check = check_missing_col(upload_df)
                             if check:
@@ -184,5 +183,3 @@ else:
             st.markdown(f'## Confira abaixo os ids das linhas que apresentam problemas.')
             #final = solved_dup(final_df)
             st.write(data_analysis_problems_ids(final_df))
-
-

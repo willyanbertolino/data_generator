@@ -75,7 +75,7 @@ def duplicated_problem_ids(df):
 
 def duplicated_problems_total(df):
     dup = duplicated_problem_ids(df)
-    return {"duplicates": len(dup["duplicatas"])}
+    return {"duplicatas": len(dup["duplicatas"])}
 
 def empty_problem_ids(df):
     empty_rows = df.isnull().any(axis=1)
@@ -114,7 +114,7 @@ def verify_city_zip_ids(df):
 
 def verify_city_zip_total(df):
     err = verify_city_zip_ids(df)
-    return {"cidade_cep_issues": len(err["cidade_cep_incompatíveis"])}
+    return {"cidade_cep_incompatível": len(err["cidade_cep_incompatíveis"])}
 
 def verify_gen_cat_sub_ids(df):
     err_ids = []
@@ -224,13 +224,14 @@ def score_data(df_initial, upload_df, n_submission):
     return isinstance(res, pd.DataFrame)
 
 def compare_result(df_initial, df_upload):
+    df_upload = df_upload[df_cols]
+    df_upload = df_upload[df_upload["id"].notna()]
     initial_problems = data_analysis_problems_dict(df_initial)
     uploaded_problems = data_analysis_problems_dict(df_upload)
     initial_problems["cidade_cep_incompatível"] = 0
-    initial_problems["genero_cat_sub_invalidos"] = 0
+    initial_problems["genero_cat_sub_incompatíveis"] = 0
 
-    dup = (uploaded_problems.get("duplicates", 0) == 0)
-
+    dup = (uploaded_problems.get("duplicatas", 0) == 0)
     total = sum(initial_problems.values())
     solved = 0
     new = 0
@@ -244,7 +245,6 @@ def compare_result(df_initial, df_upload):
             solved += before-after
     
     return {"total": total, "solved_issue": solved, "new_issue": new, "solved_dup": dup}
-
 
 def solved_dup(df):
     solved = get_dup_solved()

@@ -9,6 +9,10 @@ from routes.data.table_generator import get_user_work, to_excel
 from routes.data.analysis import set_sent_and_send, check_missing_col, errs_types, data_analysis_problems_ids, duplicated_problems_total, solved_dup
 from routes.data.db_router import get_user_df
 
+
+if "access_token" not in st.session_state:
+    st.session_state["access_token"] = None
+
 if "logged" not in st.session_state:
     st.session_state["logged"] = False
 

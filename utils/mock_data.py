@@ -49,7 +49,7 @@ calcas_sub_f = ["Jeans", "Legging", "Pantalona", "Moletom"]
 saias_sub_f = ["Curta", "Midi", "Longa", "Jeans"]
 vestidos_sub_f = ["Curto", "Midi", "Longo", "Casual", "Festa"]
 shorts_sub_f = ["Jeans", "Alfaiataria", "Moletom"]
-jaquetas_sub_f = [	"Jeans", "Couro", "Corta-vento", "Moletom"]
+jaquetas_sub_f = ["Jeans", "Couro", "Corta-vento", "Moletom"]
 sport_sub_f = ["Top", "Legging", "Shorts", "Jaqueta esportiva"]
 
 female = {"Blusas": blusas_sub_f, "Camisetas": camiseta_sub_f, "Calças": calcas_sub_f, "Saias": saias_sub_f,

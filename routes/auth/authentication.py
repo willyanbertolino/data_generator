@@ -93,12 +93,21 @@ def getUsers():
     try:
         supabase = get_supabase()
         users = supabase.table("users").select("*").execute()
+        scores = supabase.table("user_work").select("user_id, score").execute()
 
-        if users.data:
-            for user in users.data:
+        if users.data and scores.data:
+            score_map = {g["user_id"]: g["score"] for g in scores.data}
+
+            result = [
+                        {"name": u["name"], "score": score_map.get(u["id"])}
+                        for u in users.data
+                    ]
+            
+            print(result)
+            for user in result:
                 name = user["name"]
-                email = user["email"]
-                st.markdown(f"📧 **{name}** ({email})")
+                score = user["score"]
+                st.markdown(f"📧 **{name}** ({score})")
         else:
             st.info("Nenhum usuário encontrado.")
 

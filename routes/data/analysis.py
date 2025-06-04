@@ -94,6 +94,11 @@ def empty_problems_total(df):
 def verify_city_zip_ids(df):
     err_ids = []
 
+    normalized_address = {
+        str(city).strip().lower(): set(str(zip_).strip() for zip_ in zips)
+        for city, zips in address.items()
+    }
+
     for idx, row in df.iterrows():
         city = row.get("cidade")
         zip_code = row.get("cep")
@@ -101,14 +106,11 @@ def verify_city_zip_ids(df):
         if pd.isna(city) or pd.isna(zip_code):
             continue
 
-        city = str(city).strip()
+        city = str(city).strip().lower()
         zip_code = str(zip_code).strip()
 
-        if city in address and zip_code not in address[city]:
-            if "id" in df.columns:
-                err_ids.append(row["id"])
-            else:
-                err_ids.append(idx)
+        if city in normalized_address and zip_code not in normalized_address[city]:
+            err_ids.append(row["id"] if "id" in df.columns else idx)
 
     return {"cidade_cep_incompatíveis": err_ids}
 
@@ -119,6 +121,14 @@ def verify_city_zip_total(df):
 def verify_gen_cat_sub_ids(df):
     err_ids = []
 
+    normalized_products = {
+        gender.lower(): {
+            cat.lower(): [sub.lower() for sub in subs]
+            for cat, subs in categories.items()
+        }
+        for gender, categories in products.items()
+    }
+
     for idx, row in df.iterrows():
         gender = row.get("genero")
         category = row.get("categoria")
@@ -128,19 +138,16 @@ def verify_gen_cat_sub_ids(df):
             continue
 
         gender = str(gender).strip().lower()
-        category = str(category).strip()
-        subcategory = str(subcategory).strip()
+        category = str(category).strip().lower()
+        subcategory = str(subcategory).strip().lower()
 
-        if gender not in products:
+        if (
+            gender not in normalized_products or
+            category not in normalized_products[gender] or
+            subcategory not in normalized_products[gender][category]
+        ):
             err_ids.append(row["id"] if "id" in df.columns else idx)
             continue
-
-        if category not in products[gender]:
-            err_ids.append(row["id"] if "id" in df.columns else idx)
-            continue
-
-        if subcategory not in products[gender][category]:
-            err_ids.append(row["id"] if "id" in df.columns else idx)
 
     return {"genero_cat_sub_incompatíveis": err_ids}
 
@@ -218,7 +225,6 @@ def score_data(df_initial, upload_df, n_submission):
         "solved_dup": res["solved_dup"],
         "submission": n_submission+1
         }
-
     update_data(new_data, "user_work")
     res = save_df(upload_df)
     return isinstance(res, pd.DataFrame)
@@ -247,9 +253,9 @@ def compare_result(df_initial, df_upload):
     return {"total": total, "solved_issue": solved, "new_issue": new, "solved_dup": dup}
 
 def solved_dup(df):
-    solved = get_dup_solved()
+    status = get_dup_solved()
 
-    if solved:
+    if status[0]["solved_dup"]:
         duplicates_mask = df.drop(columns=["id"], errors="ignore").duplicated(keep=False)
         df_no_duplicates = df[~duplicates_mask]
         return df_no_duplicates

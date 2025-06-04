@@ -9,7 +9,6 @@ from routes.data.table_generator import get_user_work, to_excel
 from routes.data.analysis import set_sent_and_send, check_missing_col, errs_types, data_analysis_problems_ids, duplicated_problems_total, solved_dup
 from routes.data.db_router import get_user_df
 
-
 if "access_token" not in st.session_state:
     st.session_state["access_token"] = None
 
@@ -71,7 +70,6 @@ else:
             create_data, get_data = st.tabs(["Criar", "Analisar"])
 
             with create_data:
-                #modal("Cadastrar cliente",on_submit=create_client, cidade="text", cep="text", n="number", erro="type")
                 with st.expander("Criar Clientes"):
                     client_generator()
                 with st.expander("Criar Produtos"):
@@ -182,8 +180,7 @@ else:
                         st.rerun()
         else:
             st.info(f"Você atingiu o limite de tentativas. Parabéns, sua nota final é {user_work['score']}")
-            final_df = get_user_df()
-            print(duplicated_problems_total(final_df))
+            final_upload_df = get_user_df()
             st.markdown(f'## Confira abaixo os ids das linhas que apresentam problemas.')
-            #final = solved_dup(final_df)
-            st.write(data_analysis_problems_ids(final_df))
+            final = solved_dup(final_upload_df)
+            st.write(data_analysis_problems_ids(final))

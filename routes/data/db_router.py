@@ -58,7 +58,6 @@ def get_user_df():
     try:
         supabase = get_supabase()
         res = supabase.table("dataframe").select("*").eq("user_id", user_id).order("id").execute()
-        #res_work_dup = supabase.table("user_work").select("solved_dup").eq("user_id", user_id).execute()
 
         if res.data:
             return pd.DataFrame(res.data)
@@ -77,7 +76,7 @@ def get_dup_solved():
         if res_work_dup.data:
             return res_work_dup.data
         else:
-            return st.info("Não foi possível saber se resolveu duplicatas")
+            return st.info("Não foi possível saber se removeu as duplicatas")
     except Exception as e:
         st.error(f"Ocorreu um erro ao buscar os dados: {str(e)}")
         return
